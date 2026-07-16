@@ -14,6 +14,7 @@ import {
   GAME_OVER_GRACE_MS,
   SETTLE_SPEED,
   SPRITE_SCALE,
+  GHOST_ALPHA,
   DEBUG_OUTLINE,
   BUCKET_DRAW,
   ROUND_BLOCKS,
@@ -338,7 +339,7 @@ export default function GameCanvas({
       const size = spec.radius * 2 * SPRITE_SCALE;
 
       c.save();
-      c.globalAlpha = ghost ? 0.5 : 1;
+      c.globalAlpha = ghost ? GHOST_ALPHA : 1;
       c.translate(x, y);
       c.rotate(angle);
 
@@ -405,7 +406,7 @@ export default function GameCanvas({
       // Garis batas (danger line) — selebar rongga bucket.
       c.save();
       c.setLineDash([8, 6]);
-      c.lineWidth = 2;
+      c.lineWidth = 5;
       c.strokeStyle = "rgba(220,60,80,0.75)";
       c.beginPath();
       c.moveTo(cavity.left, GAME_OVER_LINE_Y);

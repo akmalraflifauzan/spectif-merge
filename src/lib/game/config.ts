@@ -20,6 +20,12 @@ export const GRAVITY_Y = 1;
  *  Ganti true/false lalu simpan untuk membandingkan. */
 export const ROUND_BLOCKS = true;
 
+/** Tingkat kepekatan blok yang sedang "dipegang" di headroom (pratinjau bidikan).
+ *  1   = pekat penuh, sama seperti blok yang sudah jatuh.
+ *  0.5 = setengah transparan (kesan "hantu").
+ *  Naikkan kalau mau lebih terang/jelas. */
+export const GHOST_ALPHA = 1;
+
 /** Seberapa besar sprite blok digambar, relatif terhadap diameter body physics.
  *  1 = seukuran diameter (sudut kotak sedikit menonjol keluar lingkaran).
  *  0.85 = sedikit lebih kecil, tumpukan terlihat lebih rapat/rapi. */

@@ -90,9 +90,7 @@ export default function GamePage() {
         <Link href="/" className="mc-text w-1/2 text-lg underline">
           &lt; Kembali
         </Link>
-        <h1 className="mc-text w-full text-lg text-center font-bold sm:text-2xl">
-          Tekan di area BUCKET untuk menaruh bola
-        </h1>
+
         {user ? (
           <button
             onClick={() => supabase.auth.signOut()}
@@ -112,9 +110,9 @@ export default function GamePage() {
 
       {/* Layar sempit: panel jadi bar horizontal di atas canvas.
           Layar lebar (lg+): panel jadi kolom kiri & kanan mengapit canvas. */}
-      <div className="flex w-full max-w-5xl flex-col items-center gap-3 lg:flex-row lg:items-start lg:justify-center">
+      <div className="flex w-full max-w-5xl flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-center">
         {/* KIRI (desktop) / BAR ATAS (mobile) */}
-        <div className="flex w-full max-w-[560px] flex-row gap-2 lg:w-44 lg:max-w-none lg:flex-col lg:gap-3">
+        <div className="flex w-full max-w-[560px] flex-row gap-2 sm:w-44 sm:max-w-none sm:flex-col sm:gap-3">
           <div className="mc-panel flex-1 p-2 text-center sm:p-3">
             <h2 className="mc-text text-[10px] sm:text-xs">SCORE</h2>
             <p className="mc-text text-xl font-bold tabular-nums text-yellow-300 sm:text-3xl">
@@ -127,13 +125,13 @@ export default function GamePage() {
           </div>
 
           {/* Next Up ikut di bar atas hanya saat layar sempit. */}
-          <div className="flex flex-1 lg:hidden">
+          <div className="flex flex-1 sm:hidden">
             <NextPanel level={next} />
           </div>
 
           <Link
             href="/leaderboard"
-            className="mc-btn hidden p-2 text-center text-xs lg:block"
+            className="mc-btn hidden p-2 text-center text-xs sm:block"
           >
             Leaderboard
           </Link>
@@ -141,6 +139,10 @@ export default function GamePage() {
 
         {/* CANVAS — menyusut mengikuti lebar layar, physics tetap sama. */}
         <div className="relative w-full max-w-[560px]">
+          <h1 className="mc-text w-full text-lg text-center font-bold sm:text-2xl mb-10 sm:mb-5">
+            Tekan dan arahkan di area BUCKET untuk menaruh bola
+          </h1>
+
           <GameCanvas
             key={runId}
             onQueueChange={handleQueueChange}
@@ -175,7 +177,7 @@ export default function GamePage() {
         </div>
 
         {/* KANAN — hanya tampil di layar lebar. */}
-        <div className="hidden w-44 flex-col gap-3 lg:flex">
+        <div className="hidden w-44 flex-col gap-3 sm:flex">
           <NextPanel level={next} />
         </div>
       </div>
@@ -183,7 +185,7 @@ export default function GamePage() {
       {/* Tombol leaderboard versi mobile (di bawah canvas). */}
       <Link
         href="/leaderboard"
-        className="mc-btn w-full max-w-[560px] p-2 text-center text-xs lg:hidden"
+        className="mc-btn w-full max-w-[560px] p-2 text-center text-xs sm:hidden"
       >
         Leaderboard
       </Link>
