@@ -26,6 +26,12 @@ export default function Home() {
         >
           Main sebagai Tamu
         </Link>
+        <Link
+          href="/leaderboard"
+          className="text-center text-sm font-semibold text-indigo-800/80 hover:underline"
+        >
+          Lihat Papan Peringkat
+        </Link>
       </div>
 
       <p className="text-xs text-indigo-800/60">

@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import GameCanvas from "@/components/GameCanvas";
 import { LEVELS } from "@/lib/game/config";
 import { useBestScore } from "@/hooks/useBestScore";
+import { useUser } from "@/hooks/useUser";
+import { supabase } from "@/lib/supabase/client";
+import { submitScore } from "@/lib/leaderboard";
 
 /** Kotak kecil pratinjau satu mikroba (dipakai di panel Next Up). */
 function MicrobePreview({ level }: { level: number }) {
@@ -45,10 +48,29 @@ export default function GamePage() {
   const handleGameOver = useCallback(
     (finalScore: number) => {
       setGameOver(true);
-      submit(finalScore); // simpan ke localStorage kalau ini rekor baru
+      submit(finalScore); // best score lokal (localStorage)
+
+      // Kalau login, kirim juga ke leaderboard Supabase.
+      const u = userRef.current;
+      if (u) {
+        const name = usernameRef.current ?? u.email?.split("@")[0] ?? "Pemain";
+        submitScore(u.id, name, finalScore).catch((err) =>
+          console.error("Gagal submit skor:", err),
+        );
+      }
     },
     [submit],
   );
+
+  const { user } = useUser();
+  const username = (user?.user_metadata?.username as string) ?? null;
+  // Simpan user & username terbaru di ref. (Lihat penjelasan di bawah.)
+  const userRef = useRef(user);
+  const usernameRef = useRef(username);
+  useEffect(() => {
+    userRef.current = user;
+    usernameRef.current = username;
+  }, [user, username]);
 
   function restart() {
     setGameOver(false);
@@ -59,11 +81,28 @@ export default function GamePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center gap-6 bg-gradient-to-b from-sky-200 to-emerald-200 p-6">
       <div className="flex w-full max-w-md items-center justify-between">
-        <Link href="/" className="text-sm font-semibold text-indigo-700 hover:underline">
+        <Link
+          href="/"
+          className="text-sm font-semibold text-indigo-700 hover:underline"
+        >
           ← Kembali
         </Link>
         <h1 className="text-3xl font-bold text-indigo-900">Petri Merge</h1>
-        <span className="w-16" />
+        {user ? (
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="text-sm font-semibold text-indigo-700 hover:underline"
+          >
+            {username ?? "Logout"} · Keluar
+          </button>
+        ) : (
+          <Link
+            href="/login"
+            className="text-sm font-semibold text-indigo-700 hover:underline"
+          >
+            Login
+          </Link>
+        )}
       </div>
       <p className="text-sm text-indigo-800/80">
         Jangan sampai tumpukan melewati garis merah!
@@ -83,6 +122,13 @@ export default function GamePage() {
               {best}
             </p>
           </div>
+
+          <Link
+            href="/leaderboard"
+            className="rounded-2xl bg-white/70 p-3 text-center text-sm font-bold text-indigo-800 shadow transition hover:bg-white"
+          >
+            🏆 Papan Peringkat
+          </Link>
         </aside>
 
         {/* relative: supaya overlay game over bisa menutup tepat di atas canvas */}
@@ -110,6 +156,12 @@ export default function GamePage() {
               >
                 Main Lagi
               </button>
+              <Link
+                href="/leaderboard"
+                className="text-sm text-white/90 underline hover:text-white"
+              >
+                Lihat Papan Peringkat
+              </Link>
             </div>
           )}
         </div>
