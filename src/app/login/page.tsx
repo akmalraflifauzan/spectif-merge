@@ -21,7 +21,7 @@ export default function LoginPage() {
 
     if (mode === "signup") {
       // Daftar akun baru. `data: { username }` disimpan ke user_metadata,
-      // nanti dipakai sebagai nama tampilan di leaderboard.
+      // dipakai sebagai nama tampilan di leaderboard.
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -50,15 +50,15 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-6 bg-gradient-to-b from-sky-200 to-emerald-200 p-6">
-      <div className="w-full max-w-sm rounded-2xl bg-white/80 p-6 shadow">
-        <h1 className="text-2xl font-extrabold text-indigo-900">
-          {mode === "login" ? "Masuk" : "Daftar"}
+    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
+      <div className="mc-panel w-full max-w-sm p-5 sm:p-6">
+        <h1 className="mc-text text-2xl font-bold">
+          {mode === "login" ? "LOGIN" : "REGISTER"}
         </h1>
 
-        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
+        <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
           {mode === "signup" && (
-            <label className="text-sm font-semibold text-indigo-900">
+            <label className="mc-text text-sm">
               Username
               <input
                 type="text"
@@ -66,12 +66,12 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="nama di leaderboard"
-                className="mt-1 w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                className="mc-input mt-1 px-3 py-2 text-sm"
               />
             </label>
           )}
 
-          <label className="text-sm font-semibold text-indigo-900">
+          <label className="mc-text text-sm">
             Email
             <input
               type="email"
@@ -79,11 +79,11 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="kamu@email.com"
-              className="mt-1 w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500"
+              className="mc-input mt-1 px-3 py-2 text-sm"
             />
           </label>
 
-          <label className="text-sm font-semibold text-indigo-900">
+          <label className="mc-text text-sm">
             Password
             <input
               type="password"
@@ -91,12 +91,12 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="minimal 6 karakter"
-              className="mt-1 w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500"
+              className="mc-input mt-1 px-3 py-2 text-sm"
             />
           </label>
 
           {error && (
-            <p className="rounded-lg bg-red-100 px-3 py-2 text-xs text-red-700">
+            <p className="border-4 border-black bg-red-900/80 px-3 py-2 text-xs">
               {error}
             </p>
           )}
@@ -104,9 +104,9 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 rounded-full bg-indigo-600 px-6 py-2.5 font-bold text-white shadow transition hover:bg-indigo-500 disabled:opacity-50"
+            className="mc-btn mc-btn-primary px-6 py-2.5"
           >
-            {loading ? "Memproses..." : mode === "login" ? "Masuk" : "Daftar"}
+            {loading ? "Memproses..." : mode === "login" ? "Login" : "Register"}
           </button>
         </form>
 
@@ -115,18 +115,18 @@ export default function LoginPage() {
             setMode(mode === "login" ? "signup" : "login");
             setError(null);
           }}
-          className="mt-3 text-sm text-indigo-700 hover:underline"
+          className="mc-text mt-4 text-xs underline"
         >
           {mode === "login"
-            ? "Belum punya akun? Daftar"
-            : "Sudah punya akun? Masuk"}
+            ? "Belum punya akun? Register"
+            : "Sudah punya akun? Login"}
         </button>
 
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <Link href="/game" className="text-indigo-700 hover:underline">
-            Main sebagai tamu
+        <div className="mc-text mt-4 flex items-center justify-between text-xs">
+          <Link href="/game" className="underline">
+            Play as guest
           </Link>
-          <Link href="/" className="text-indigo-700 hover:underline">
+          <Link href="/" className="underline">
             Kembali
           </Link>
         </div>

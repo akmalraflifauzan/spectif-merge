@@ -2,41 +2,41 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-10 bg-gradient-to-b from-sky-200 to-emerald-200 p-6">
+    <main className="min-h-screen flex flex-col items-center justify-center gap-8 p-6">
       <div className="text-center">
-        <h1 className="text-5xl font-extrabold text-indigo-900">Petri Merge</h1>
-        <p className="mt-3 text-indigo-800/80">
-          Gabungkan mikroba, raih skor setinggi mungkin!
+        <h1 className="mc-text text-4xl sm:text-8xl font-bold tracking-wider">
+          MC Ball Merge
+        </h1>
+        <p className="mc-text mt-3 text-md sm:text-base">
+          Gabungkan bola, raih skor setinggi mungkin!
         </p>
       </div>
 
       <div className="flex w-full max-w-xs flex-col gap-4">
-        {/* Main dengan login -> ke halaman login (backend menyusul di Tahap 7) */}
+        {/* Main dengan login -> ke halaman login */}
         <Link
           href="/login"
-          className="rounded-full bg-indigo-600 px-6 py-3 text-center font-bold text-white shadow transition hover:bg-indigo-500"
+          className="mc-btn mc-btn-primary px-6 py-3 text-center text-lg"
         >
-          Main dengan Login
+          Login
         </Link>
 
         {/* Main tanpa login -> langsung ke game */}
-        <Link
-          href="/game"
-          className="rounded-full bg-white/80 px-6 py-3 text-center font-bold text-indigo-900 shadow transition hover:bg-white"
-        >
-          Main sebagai Tamu
+        <Link href="/game" className="mc-btn px-6 py-3 text-center text-lg">
+          Play as guest
         </Link>
+
         <Link
           href="/leaderboard"
-          className="text-center text-sm font-semibold text-indigo-800/80 hover:underline"
+          className="mc-btn px-6 py-2 text-center text-lg"
         >
-          Lihat Papan Peringkat
+          Leaderboard
         </Link>
       </div>
 
-      <p className="text-xs text-indigo-800/60">
-        Login menyimpan skormu ke papan peringkat. Tamu hanya menyimpan rekor di
-        perangkat ini.
+      <p className="mc-text max-w-sm text-center text-md leading-relaxed">
+        Login menyimpan skormu ke leaderboard. Guest hanya menyimpan rekor di
+        device ini.
       </p>
     </main>
   );

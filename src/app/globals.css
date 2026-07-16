@@ -1,26 +1,105 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-pixel);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Background Minecraft dipakai di SEMUA halaman. */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-pixel), monospace;
+  color: #ffffff;
+  background-image: url("/banckground.webp");
+  background-size: cover;
+  background-position: top;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
+
+/* Pixel art harus tajam-kotak saat diperbesar, bukan blur. */
+img,
+canvas {
+  image-rendering: pixelated;
+}
+
+/* ---------------------------------------------------------------
+   Komponen ala Minecraft.
+   Kuncinya ada di "bevel": sisi kiri-atas terang, kanan-bawah gelap.
+   Itu yang bikin kotak datar terlihat timbul 3D seperti UI Minecraft.
+   Sengaja TANPA border-radius — semua harus kotak.
+
+   PENTING: semuanya dibungkus `@layer components`.
+   Tailwind punya urutan layer baku: theme -> base -> components -> utilities.
+   Dengan berada di layer `components`, kelas-kelas ini SELALU bisa ditimpa
+   oleh utility Tailwind (mis. `hidden`, `lg:block`, `w-full`) tanpa peduli
+   urutan penulisan. Kalau ditulis di luar layer, `.mc-btn { display:inline-block }`
+   akan mengalahkan `.hidden { display:none }` -> tombol nggak bisa disembunyikan.
+   --------------------------------------------------------------- */
+
+@layer components {
+
+/* Teks dengan bayangan khas Minecraft. */
+.mc-text {
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.75);
+}
+
+/* Panel / kotak informasi. */
+.mc-panel {
+  background: rgba(22, 22, 22, 0.88);
+  border: 4px solid #000000;
+  box-shadow:
+    inset 3px 3px 0 rgba(255, 255, 255, 0.22),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.55);
+}
+
+/* Tombol. */
+.mc-btn {
+  display: inline-block;
+  background: #8b8b8b;
+  color: #ffffff;
+  border: 4px solid #000000;
+  box-shadow:
+    inset 3px 3px 0 rgba(255, 255, 255, 0.4),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.45);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.mc-btn:hover {
+  background: #a4a4a4;
+}
+/* Saat ditekan, bevel dibalik -> terasa "masuk ke dalam". */
+.mc-btn:active {
+  box-shadow:
+    inset -3px -3px 0 rgba(255, 255, 255, 0.2),
+    inset 3px 3px 0 rgba(0, 0, 0, 0.5);
+}
+.mc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Tombol aksi utama (hijau ala emerald). */
+.mc-btn-primary {
+  background: #4e8c3a;
+}
+.mc-btn-primary:hover {
+  background: #5da645;
+}
+
+/* Kolom isian. */
+.mc-input {
+  width: 100%;
+  background: #1d1d1d;
+  color: #ffffff;
+  border: 4px solid #000000;
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.6);
+  outline: none;
+}
+.mc-input:focus {
+  border-color: #ffffff;
+}
+.mc-input::placeholder {
+  color: #7a7a7a;
+}
+
+} /* akhir @layer components */

@@ -13,9 +13,13 @@ import {
   GAME_OVER_LINE_Y,
   GAME_OVER_GRACE_MS,
   SETTLE_SPEED,
-  HEADROOM,
+  SPRITE_SCALE,
+  DEBUG_OUTLINE,
+  BUCKET_DRAW,
+  ROUND_BLOCKS,
 } from "@/lib/game/config";
-import { createBowl } from "@/lib/game/bowl";
+import { createBowl, bucketCavity } from "@/lib/game/bowl";
+import { loadSprites, isReady } from "@/lib/game/sprites";
 import {
   loadState,
   saveState,
@@ -32,9 +36,9 @@ type Props = {
   onGameOver?: (finalScore: number) => void;
 };
 
-/** Data yang kita titipkan di setiap body mikroba.
+/** Data yang kita titipkan di setiap body blok.
  *  aboveSince = kapan (timestamp) bola ini MULAI diam di atas garis batas. */
-type MicrobePlugin = { level: number; merged?: boolean; aboveSince?: number };
+type BlockPlugin = { level: number; merged?: boolean; aboveSince?: number };
 
 /** Ambil level acak yang boleh muncul dari drop (0..DROP_MAX_LEVEL). */
 function randomDropLevel() {
@@ -47,6 +51,21 @@ export default function GameCanvas({
   onGameOver,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // --- Callback versi TERBARU disimpan di sini --------------------------
+  // Effect utama (yang membangun engine) sengaja tidak memasukkan callback ke
+  // dependency-nya: kalau masuk, tiap kali induk re-render engine akan
+  // dibongkar-pasang dan permainan ter-reset. Tapi kalau effect langsung
+  // menangkap callback dari props, dia akan memegang versi LAMA selamanya
+  // (stale closure) — mis. `user` yang belum selesai dimuat saat mount.
+  //
+  // Ref ini menjembatani keduanya: effect dijalankan sekali, tapi selalu
+  // memanggil callback versi terkini. Karena itu halaman pemanggil tidak perlu
+  // lagi membuat ref sendiri.
+  const cbRef = useRef<Props | null>(null);
+  useEffect(() => {
+    cbRef.current = { onQueueChange, onScoreChange, onGameOver };
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -61,21 +80,27 @@ export default function GameCanvas({
 
     const t = WORLD.wallThickness;
     const wallOptions = { isStatic: true };
-    // Lantai melengkung (mangkuk) supaya bola menggelinding ke tengah.
+
+    // Muat gambar (blok + bucket). Asinkron — game loop cek kesiapannya.
+    const sprites = loadSprites();
+
+    // Rongga dalam bucket = area bermain.
+    const cavity = bucketCavity();
+    // Lantai melengkung supaya blok menggelinding ke tengah bucket.
     const bowl = createBowl(world);
-    // Dinding hanya menutup area WADAH (mulai dari HEADROOM ke bawah), sehingga
-    // ada ruang kosong di atas untuk zona drop.
-    const wallHeight = WORLD.height - HEADROOM;
+
+    // Dinding kiri & kanan menempel pada sisi dalam bucket.
+    const wallHeight = cavity.bottom - cavity.top;
     const leftWall = Matter.Bodies.rectangle(
-      t / 2,
-      HEADROOM + wallHeight / 2,
+      cavity.left - t / 2,
+      cavity.top + wallHeight / 2,
       t,
       wallHeight,
       wallOptions,
     );
     const rightWall = Matter.Bodies.rectangle(
-      WORLD.width - t / 2,
-      HEADROOM + wallHeight / 2,
+      cavity.right + t / 2,
+      cavity.top + wallHeight / 2,
       t,
       wallHeight,
       wallOptions,
@@ -97,15 +122,15 @@ export default function GameCanvas({
     // TAPI diproses setelah Engine.update — bukan di tengah perhitungan physics.
     const mergeQueue: [Matter.Body, Matter.Body][] = [];
 
-    function spawnMicrobe(x: number, y: number, level: number) {
+    function spawnBlock(x: number, y: number, level: number) {
       const spec = LEVELS[level];
       const body = Matter.Bodies.circle(x, y, spec.radius, {
         restitution: 0.2,
         friction: 0.4,
         density: 0.001,
-        label: "microbe",
+        label: "block",
       });
-      const plugin: MicrobePlugin = { level };
+      const plugin: BlockPlugin = { level };
       body.plugin = plugin;
       Matter.Composite.add(world, body);
       return body;
@@ -120,7 +145,7 @@ export default function GameCanvas({
       currentLevel = saved.current;
       nextLevel = saved.next;
       for (const sb of saved.bodies) {
-        const body = spawnMicrobe(sb.x, sb.y, sb.level);
+        const body = spawnBlock(sb.x, sb.y, sb.level);
         // Kembalikan juga kecepatan & rotasinya, biar physics-nya mulus
         // (nggak "loncat" seolah semua baru dijatuhkan).
         Matter.Body.setVelocity(body, { x: sb.vx, y: sb.vy });
@@ -130,15 +155,15 @@ export default function GameCanvas({
     }
 
     // Kabari React soal antrian & skor awal (setelah kemungkinan dipulihkan).
-    onQueueChange?.(currentLevel, nextLevel);
-    onScoreChange?.(score);
+    cbRef.current?.onQueueChange?.(currentLevel, nextLevel);
+    cbRef.current?.onScoreChange?.(score);
 
     // --- Simpan snapshot secara berkala & saat halaman ditutup ------------
     function snapshot() {
       const bodies: SavedBody[] = [];
       for (const b of Matter.Composite.allBodies(world)) {
-        if (b.label !== "microbe") continue;
-        const p = b.plugin as MicrobePlugin;
+        if (b.label !== "block") continue;
+        const p = b.plugin as BlockPlugin;
         bodies.push({
           x: b.position.x,
           y: b.position.y,
@@ -168,11 +193,11 @@ export default function GameCanvas({
       return Math.max(DROP_LINE_Y, LEVELS[level].radius + 6);
     }
 
-    /** Jaga bidikan supaya lingkaran nggak nembus dinding kiri/kanan. */
+    /** Jaga bidikan supaya blok nggak nembus sisi dalam bucket. */
     function clampAim(x: number, level: number) {
       const r = LEVELS[level].radius;
-      const min = t + r;
-      const max = WORLD.width - t - r;
+      const min = cavity.left + r;
+      const max = cavity.right - r;
       return Math.max(min, Math.min(max, x));
     }
 
@@ -189,12 +214,12 @@ export default function GameCanvas({
     function handleDown(e: MouseEvent) {
       if (!canDrop || gameOver) return;
       const x = clampAim(screenToWorldX(e.clientX), currentLevel);
-      spawnMicrobe(x, heldY(currentLevel), currentLevel);
+      spawnBlock(x, heldY(currentLevel), currentLevel);
 
       // Geser antrian: next jadi current, lalu bikin next baru.
       currentLevel = nextLevel;
       nextLevel = randomDropLevel();
-      onQueueChange?.(currentLevel, nextLevel);
+      cbRef.current?.onQueueChange?.(currentLevel, nextLevel);
 
       // Mulai cooldown.
       canDrop = false;
@@ -208,10 +233,10 @@ export default function GameCanvas({
     function handleTouchEnd() {
       if (!canDrop || gameOver) return;
       const x = clampAim(aimX, currentLevel);
-      spawnMicrobe(x, heldY(currentLevel), currentLevel);
+      spawnBlock(x, heldY(currentLevel), currentLevel);
       currentLevel = nextLevel;
       nextLevel = randomDropLevel();
-      onQueueChange?.(currentLevel, nextLevel);
+      cbRef.current?.onQueueChange?.(currentLevel, nextLevel);
       canDrop = false;
       lastDropAt = performance.now();
     }
@@ -226,10 +251,10 @@ export default function GameCanvas({
       for (const pair of e.pairs) {
         const a = pair.bodyA;
         const b = pair.bodyB;
-        if (a.label !== "microbe" || b.label !== "microbe") continue;
+        if (a.label !== "block" || b.label !== "block") continue;
 
-        const pa = a.plugin as MicrobePlugin;
-        const pb = b.plugin as MicrobePlugin;
+        const pa = a.plugin as BlockPlugin;
+        const pb = b.plugin as BlockPlugin;
 
         // Syarat merge:
         // - level sama
@@ -253,29 +278,29 @@ export default function GameCanvas({
     function processMerges() {
       if (mergeQueue.length === 0) return;
       for (const [a, b] of mergeQueue) {
-        const level = (a.plugin as MicrobePlugin).level;
+        const level = (a.plugin as BlockPlugin).level;
         const newLevel = level + 1;
 
-        // Titik lahir mikroba baru = tengah-tengah dua yang lebur.
+        // Titik lahir blok baru = tengah-tengah dua yang lebur.
         const x = (a.position.x + b.position.x) / 2;
         const y = (a.position.y + b.position.y) / 2;
 
         Matter.Composite.remove(world, a);
         Matter.Composite.remove(world, b);
-        spawnMicrobe(x, y, newLevel);
+        spawnBlock(x, y, newLevel);
 
         score += LEVELS[newLevel].score;
       }
       mergeQueue.length = 0; // kosongkan antrian
-      onScoreChange?.(score);
+      cbRef.current?.onScoreChange?.(score);
     }
 
-    /** Cek apakah ada mikroba diam yang nangkring di atas garis batas kelamaan. */
+    /** Cek apakah ada blok diam yang nangkring di atas garis batas kelamaan. */
     function checkGameOver() {
       const now = performance.now();
       for (const body of Matter.Composite.allBodies(world)) {
-        if (body.label !== "microbe") continue;
-        const p = body.plugin as MicrobePlugin;
+        if (body.label !== "block") continue;
+        const p = body.plugin as BlockPlugin;
         const radius = LEVELS[p.level].radius;
         const top = body.position.y - radius; // sisi atas bola
         const speed = Math.hypot(body.velocity.x, body.velocity.y);
@@ -286,7 +311,7 @@ export default function GameCanvas({
           else if (now - p.aboveSince > GAME_OVER_GRACE_MS) {
             gameOver = true;
             clearState(); // hapus snapshot -> refresh setelah kalah mulai fresh
-            onGameOver?.(score);
+            cbRef.current?.onGameOver?.(score);
             return;
           }
         } else {
@@ -299,18 +324,52 @@ export default function GameCanvas({
     // --- Game loop --------------------------------------------------------
     let rafId = 0;
 
-    function drawCircle(x: number, y: number, level: number, ghost = false) {
+    /** Gambar satu blok Minecraft. `angle` bikin blok terlihat menggelinding. */
+    function drawBlock(
+      x: number,
+      y: number,
+      level: number,
+      angle = 0,
+      ghost = false,
+    ) {
       const c = ctx!;
       const spec = LEVELS[level];
-      c.globalAlpha = ghost ? 0.45 : 1;
-      c.beginPath();
-      c.arc(x, y, spec.radius, 0, Math.PI * 2);
-      c.fillStyle = spec.color;
-      c.fill();
+      const img = sprites.blocks[level];
+      const size = spec.radius * 2 * SPRITE_SCALE;
+
+      c.save();
+      c.globalAlpha = ghost ? 0.5 : 1;
+      c.translate(x, y);
+      c.rotate(angle);
+
+      // ROUND_BLOCKS = true -> tekstur dipotong lingkaran seukuran body physics.
+      if (ROUND_BLOCKS) {
+        c.beginPath();
+        c.arc(0, 0, spec.radius, 0, Math.PI * 2);
+        c.clip();
+      }
+
+      if (isReady(img)) {
+        c.drawImage(img, -size / 2, -size / 2, size, size);
+      } else {
+        // Cadangan selagi gambar belum selesai dimuat.
+        c.fillStyle = spec.color;
+        c.fillRect(-size / 2, -size / 2, size, size);
+      }
+
+      // Garis tepi tipis biar batas antar blok tetap kelihatan.
+      // Digambar SEBELUM restore supaya ikut berputar bersama blok kotak.
       c.lineWidth = 2;
-      c.strokeStyle = "rgba(0,0,0,0.15)";
-      c.stroke();
-      c.globalAlpha = 1;
+      c.strokeStyle = "rgba(0,0,0,0.35)";
+      if (ROUND_BLOCKS) {
+        c.beginPath();
+        c.arc(0, 0, spec.radius, 0, Math.PI * 2);
+        c.stroke();
+      } else {
+        c.strokeRect(-size / 2, -size / 2, size, size);
+      }
+
+      c.restore();
     }
 
     function draw() {
@@ -329,47 +388,89 @@ export default function GameCanvas({
       }
 
       c.clearRect(0, 0, WORLD.width, WORLD.height);
-      // Zona drop (headroom) dibiarkan transparan -> tembus ke background halaman.
-      // Hanya area wadah (di bawah headroom) yang diberi warna.
-      c.fillStyle = "#eef9d9";
-      c.fillRect(0, HEADROOM, WORLD.width, WORLD.height - HEADROOM);
+      // Pixel-art harus tajam, bukan blur, saat diperbesar.
+      c.imageSmoothingEnabled = false;
 
-      // Lantai melengkung digambar mulus mengikuti kurva mangkuk.
-      bowl.drawFloor(c);
-
-      // Dinding kiri & kanan.
-      c.fillStyle = "#9fc6a0";
-      for (const body of [leftWall, rightWall]) {
-        c.beginPath();
-        const [first, ...rest] = body.vertices;
-        c.moveTo(first.x, first.y);
-        for (const v of rest) c.lineTo(v.x, v.y);
-        c.closePath();
-        c.fill();
+      // Bucket sebagai wadah. Area gambarnya diatur lewat BUCKET_DRAW di config,
+      // terpisah dari ukuran canvas — jadi bucket bisa ditinggikan/diramping-kan
+      // tanpa mengubah WORLD.width/height.
+      const bx = BUCKET_DRAW.left * WORLD.width;
+      const by = BUCKET_DRAW.top * WORLD.height;
+      const bw = (BUCKET_DRAW.right - BUCKET_DRAW.left) * WORLD.width;
+      const bh = (BUCKET_DRAW.bottom - BUCKET_DRAW.top) * WORLD.height;
+      if (isReady(sprites.bucket)) {
+        c.drawImage(sprites.bucket, bx, by, bw, bh);
       }
 
-      // Garis batas (danger line).
+      // Garis batas (danger line) — selebar rongga bucket.
       c.save();
       c.setLineDash([8, 6]);
       c.lineWidth = 2;
-      c.strokeStyle = "rgba(220,60,80,0.6)";
+      c.strokeStyle = "rgba(220,60,80,0.75)";
       c.beginPath();
-      c.moveTo(t, GAME_OVER_LINE_Y);
-      c.lineTo(WORLD.width - t, GAME_OVER_LINE_Y);
+      c.moveTo(cavity.left, GAME_OVER_LINE_Y);
+      c.lineTo(cavity.right, GAME_OVER_LINE_Y);
       c.stroke();
       c.restore();
 
-      // Semua mikroba yang sudah jatuh.
+      // Semua blok yang sudah jatuh (ikut berputar sesuai physics).
       for (const body of Matter.Composite.allBodies(world)) {
         if (body.isStatic) continue;
         const level = (body.plugin as { level?: number })?.level ?? 0;
-        drawCircle(body.position.x, body.position.y, level);
+        drawBlock(body.position.x, body.position.y, level, body.angle);
       }
 
       // Preview bidikan hanya ditampilkan saat game masih berjalan.
       if (!gameOver) {
         const previewX = clampAim(aimX, currentLevel);
-        drawCircle(previewX, heldY(currentLevel), currentLevel, true);
+        drawBlock(previewX, heldY(currentLevel), currentLevel, 0, true);
+      }
+
+      // --- Garis bantu kalibrasi (matikan lewat DEBUG_OUTLINE di config) ---
+      if (DEBUG_OUTLINE) {
+        c.save();
+        c.setLineDash([]);
+
+        // MAGENTA: batas canvas -> setel WORLD.width / WORLD.height
+        c.strokeStyle = "#ff00ff";
+        c.lineWidth = 2;
+        c.strokeRect(1, 1, WORLD.width - 2, WORLD.height - 2);
+
+        // ORANYE: area GAMBAR bucket -> setel BUCKET_DRAW
+        c.strokeStyle = "#ff9500";
+        c.strokeRect(bx, by, bw, bh);
+
+        // CYAN: rongga bucket (area bermain) -> setel BUCKET.innerLeft/Right/Bottom
+        c.strokeStyle = "#00ffff";
+        c.strokeRect(
+          cavity.left,
+          cavity.top,
+          cavity.right - cavity.left,
+          cavity.bottom - cavity.top,
+        );
+
+        // KUNING: lantai melengkung sesungguhnya -> setel BOWL.depth
+        c.strokeStyle = "#ffee00";
+        c.beginPath();
+        for (let i = 0; i <= 40; i++) {
+          const x = cavity.left + ((cavity.right - cavity.left) * i) / 40;
+          const y = bowl.curveYAt(x);
+          if (i === 0) c.moveTo(x, y);
+          else c.lineTo(x, y);
+        }
+        c.stroke();
+
+        // Angka-angka biar gampang dibaca sambil nyetel.
+        c.font = "bold 12px monospace";
+        c.fillStyle = "#ff00ff";
+        c.fillText(`canvas ${WORLD.width} x ${WORLD.height}`, 6, 14);
+        c.fillStyle = "#00b8b8";
+        c.fillText(
+          `cavity L:${Math.round(cavity.left)} R:${Math.round(cavity.right)} B:${Math.round(cavity.bottom)}`,
+          6,
+          28,
+        );
+        c.restore();
       }
 
       rafId = requestAnimationFrame(draw);
@@ -390,14 +491,20 @@ export default function GameCanvas({
       Matter.World.clear(world, false);
       Matter.Engine.clear(engine);
     };
-  }, [onQueueChange, onScoreChange]);
+    // Sengaja tanpa dependency: engine dibangun SEKALI saja. Callback terbaru
+    // sudah dijamin lewat cbRef di atas.
+  }, []);
 
   return (
     <canvas
       ref={canvasRef}
       width={WORLD.width}
       height={WORLD.height}
-      className="rounded-2xl cursor-pointer touch-none"
+      // w-full + h-auto: canvas menyusut mengikuti lebar induknya (mobile),
+      // tapi resolusi internalnya tetap WORLD.width x WORLD.height — jadi
+      // physics tidak terpengaruh. Bidikan tetap akurat karena screenToWorldX
+      // menghitung posisi relatif terhadap ukuran tampil (getBoundingClientRect).
+      className="block h-auto w-full cursor-pointer touch-none select-none"
     />
   );
 }

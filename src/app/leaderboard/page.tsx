@@ -17,28 +17,25 @@ export default function LeaderboardPage() {
   }, []);
 
   return (
-    <main className="min-h-screen flex flex-col items-center gap-6 bg-gradient-to-b from-sky-200 to-emerald-200 p-6">
+    <main className="min-h-screen flex flex-col items-center gap-5 p-4 sm:p-6">
       <div className="flex w-full max-w-md items-center justify-between pt-4">
-        <Link
-          href="/"
-          className="text-sm font-semibold text-indigo-700 hover:underline"
-        >
-          ← Kembali
+        <Link href="/" className="mc-text text-md underline">
+          &lt; Kembali
         </Link>
-        <h1 className="text-2xl font-extrabold text-indigo-900">
-          Papan Peringkat
-        </h1>
+        <h1 className="mc-text text-xl sm:text-3xl font-bold">Leaderboard</h1>
         <span className="w-16" />
       </div>
 
-      <div className="w-full max-w-md rounded-2xl bg-white/80 p-4 shadow">
+      <div className="mc-panel w-full max-w-md p-4">
         {loading && (
-          <p className="p-4 text-center text-indigo-800/70">Memuat...</p>
+          <p className="mc-text p-4 text-center text-sm">Memuat...</p>
         )}
-        {error && <p className="p-4 text-center text-red-600">{error}</p>}
+        {error && (
+          <p className="p-4 text-center text-sm text-red-400">{error}</p>
+        )}
 
         {!loading && !error && rows.length === 0 && (
-          <p className="p-4 text-center text-indigo-800/70">
+          <p className="mc-text p-4 text-center text-sm">
             Belum ada skor. Jadilah yang pertama!
           </p>
         )}
@@ -48,17 +45,13 @@ export default function LeaderboardPage() {
             {rows.map((row, i) => (
               <li
                 key={row.user_id}
-                className="flex items-center justify-between rounded-lg px-3 py-2 odd:bg-indigo-50/60"
+                className="mc-text flex items-center justify-between gap-2 px-2 py-2 text-sm odd:bg-white/10"
               >
-                <span className="flex items-center gap-3">
-                  <span className="w-6 text-center font-bold text-indigo-700">
-                    {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
-                  </span>
-                  <span className="font-semibold text-indigo-900">
-                    {row.username}
-                  </span>
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="w-6 shrink-0 text-center">{i + 1}.</span>
+                  <span className="truncate">{row.username}</span>
                 </span>
-                <span className="font-bold tabular-nums text-indigo-700">
+                <span className="shrink-0 tabular-nums text-yellow-300">
                   {row.best_score}
                 </span>
               </li>
@@ -67,11 +60,8 @@ export default function LeaderboardPage() {
         )}
       </div>
 
-      <Link
-        href="/game"
-        className="rounded-full bg-indigo-600 px-6 py-2.5 font-bold text-white shadow transition hover:bg-indigo-500"
-      >
-        Main
+      <Link href="/game" className="mc-btn mc-btn-primary px-8 py-2.5">
+        Play
       </Link>
     </main>
   );
